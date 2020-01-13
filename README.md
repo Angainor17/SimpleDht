@@ -1,2 +1,2 @@
-# DHT-Android
-Distributed Hash Table implemented using Android group messenger apps
+# DHT-Android test app
+implemented using Android group messenger apps
