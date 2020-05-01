@@ -1,7 +1,16 @@
 package edu.buffalo.cse.cse486586.simpledht;
 
+import android.content.ContentProvider;
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.database.MatrixCursor;
+import android.net.Uri;
+import android.os.AsyncTask;
+import android.telephony.TelephonyManager;
+import android.util.Log;
+
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -16,23 +25,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Formatter;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantLock;
-
-import android.content.ContentProvider;
-import android.content.ContentValues;
-import android.content.Context;
-import android.database.Cursor;
-import android.database.MatrixCursor;
-import android.net.Uri;
-import android.os.AsyncTask;
-import android.telephony.TelephonyManager;
-import android.util.Log;
 
 public class SimpleDhtProvider extends ContentProvider {
 
@@ -57,8 +55,8 @@ public class SimpleDhtProvider extends ContentProvider {
 
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
-        Log.i("DATA", "Delete on " + id + ":" +selection);
-        if(!checkHash(selection)){
+        Log.i("DATA", "Delete on " + id + ":" + selection);
+        if (!checkHash(selection)) {
             Message msg = new Message(MESSAGE_DATA_DELETE, selection);
             int sport = Integer.parseInt(successor) * 2;
             sendMessage(msg, sport);
@@ -66,10 +64,10 @@ public class SimpleDhtProvider extends ContentProvider {
             return 0;
         }
         List<String> files = Arrays.asList(getContext().fileList());
-        if(selection.equals("\"*\"") || selection.equals("\"@\"")){
-            for(String key : files)
+        if (selection.equals("\"*\"") || selection.equals("\"@\"")) {
+            for (String key : files)
                 delete(key);
-            if(selection.equals("\"@\"")){
+            if (selection.equals("\"@\"")) {
                 Message msg = new Message(MESSAGE_DATA_DELETE, selection);
                 int sport = Integer.parseInt(successor) * 2;
                 sendMessage(msg, sport);
@@ -94,11 +92,11 @@ public class SimpleDhtProvider extends ContentProvider {
         String key = values.getAsString("key");
         String value = values.getAsString("value");
         Log.i("DATA", "Insert on " + id + "=>" + key + ":" + value);
-        if(!checkHash(key)){
+        if (!checkHash(key)) {
             Message msg = new Message(MESSAGE_DATA_INSERT, key + ">>" + value);
             int sport = Integer.parseInt(successor) * 2;
             sendMessage(msg, sport);
-            Log.i("DATA", "Forwarded message to " + sport/2);
+            Log.i("DATA", "Forwarded message to " + sport / 2);
             return uri;
         }
         save(key, value);
@@ -114,7 +112,11 @@ public class SimpleDhtProvider extends ContentProvider {
         successor = "";
         ids = new ArrayList<>();
         TelephonyManager tel = (TelephonyManager) getContext().getSystemService(Context.TELEPHONY_SERVICE);
-        id = tel.getLine1Number().substring(tel.getLine1Number().length() - 4);
+//        String line1Number =""+(new Random).nextInt() ;
+
+//        String line1Number = tel.getLine1Number();
+        id = (new Random().nextInt() / 10000) + "";
+//        id = line1Number.substring(line1Number.length() - 4);
         port = String.valueOf((Integer.parseInt(id) * 2));
 
         try {
@@ -132,7 +134,7 @@ public class SimpleDhtProvider extends ContentProvider {
         }
         new ServerTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, serverSocket);
 
-        if(!id.equals("5554")) {
+        if (!id.equals("5554")) {
             //send data to 5554 about joining
             Message msg = new Message(MESSAGE_JOIN_REQUEST, id);
             Log.i("DEBUG", "Requesting to join chord from " + id);
@@ -146,31 +148,31 @@ public class SimpleDhtProvider extends ContentProvider {
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
                         String sortOrder) {
-        Log.i("DATA", "Query on " + id + ":" +selection);
+        Log.i("DATA", "Query on " + id + ":" + selection);
         List<String> values = new ArrayList<>();
         List<String> keys = new ArrayList<>();
-        if(selection.equals("\"*\"") || selection.equals("\"@\"")){
+        if (selection.equals("\"*\"") || selection.equals("\"@\"")) {
             String[] lkeys = getContext().fileList();
-            for(String key : lkeys){
+            for (String key : lkeys) {
                 values.add(fetch(key));
                 keys.add(key);
             }
-            if(selection.equals("\"*\"")){
+            if (selection.equals("\"*\"")) {
                 Message msg = new Message(MESSAGE_DATA_REQUEST, "\"@\"");
                 msg.setSenderport(Integer.parseInt(port));
                 //countLock.lock();
                 dataCount = 0;
-                totalCount = ids.size()-1;
-                for(String lid : ids){
-                    if(lid.equals(this.id))
+                totalCount = ids.size() - 1;
+                for (String lid : ids) {
+                    if (lid.equals(this.id))
                         continue;
-                    int sport = Integer.parseInt(lid)*2;
+                    int sport = Integer.parseInt(lid) * 2;
                     sendMessage(msg, sport);
                     //new ClientTask(port).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, msg);
                     Log.i("DATA", "Query forwarded to " + lid);
                 }
                 //wait for all data
-                while(dataCount < totalCount) {
+                while (dataCount < totalCount) {
                     try {
                         Thread.sleep(20);
                     } catch (InterruptedException e) {
@@ -178,7 +180,7 @@ public class SimpleDhtProvider extends ContentProvider {
                     }
                 }
 
-                if(!dataMsg.isEmpty()) {
+                if (!dataMsg.isEmpty()) {
                     String[] pairs = dataMsg.split("\\|");
                     Log.i("DATA", "Number of data received " + pairs.length);
                     for (String p : pairs) {
@@ -191,18 +193,18 @@ public class SimpleDhtProvider extends ContentProvider {
                 //countLock.unlock();
             }
         } else {
-            if(!checkHash(selection)){
+            if (!checkHash(selection)) {
                 //countLock.lock();
                 dataCount = 0;
                 totalCount = 1;
                 Message msg = new Message(MESSAGE_DATA_REQUEST, selection);
                 msg.setSenderport(Integer.parseInt(port));
-                int sport = Integer.parseInt(successor)*2;
+                int sport = Integer.parseInt(successor) * 2;
                 sendMessage(msg, sport);
                 //new ClientTask(sport).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, msg);
                 Log.i("DATA", "Forwarded request to " + successor);
                 //wait for data
-                while(dataCount < totalCount) {
+                while (dataCount < totalCount) {
                     try {
                         Thread.sleep(20);
                     } catch (InterruptedException e) {
@@ -214,7 +216,7 @@ public class SimpleDhtProvider extends ContentProvider {
                 keys.add(kv[0]);
                 values.add(kv[1]);
                 dataMsg = "";
-            }else{
+            } else {
                 keys.add(selection);
                 values.add(fetch(selection));
             }
@@ -222,7 +224,7 @@ public class SimpleDhtProvider extends ContentProvider {
         }
         String[] cols = {"key", "value"};
         MatrixCursor cursor = new MatrixCursor(cols);
-        for(int i = 0; i < keys.size(); i++){
+        for (int i = 0; i < keys.size(); i++) {
             List<String> row = new ArrayList<String>();
             row.add(keys.get(i));
             row.add(values.get(i));
@@ -237,7 +239,7 @@ public class SimpleDhtProvider extends ContentProvider {
     private boolean checkHash(String key) {
         String hash = "";
         String prehash = "";
-        if(predecessor.equals("") || successor.equals(""))
+        if (predecessor.equals("") || successor.equals(""))
             return true;
         try {
             hash = genHash(key);
@@ -245,11 +247,11 @@ public class SimpleDhtProvider extends ContentProvider {
         } catch (NoSuchAlgorithmException e) {
             Log.e("SERVER", e.getMessage());
         }
-        if(hash.compareTo(idhash) <= 0 && hash.compareTo(prehash) > 0)
+        if (hash.compareTo(idhash) <= 0 && hash.compareTo(prehash) > 0)
             return true;
-        if(id.equals(ids.get(0)) && hash.compareTo(prehash) > 0)
+        if (id.equals(ids.get(0)) && hash.compareTo(prehash) > 0)
             return true;
-        if(id.equals(ids.get(0)) && hash.compareTo(idhash) <= 0)
+        if (id.equals(ids.get(0)) && hash.compareTo(idhash) <= 0)
             return true;
         return false;
     }
@@ -293,7 +295,7 @@ public class SimpleDhtProvider extends ContentProvider {
         }
     }
 
-    private void delete(String key){
+    private void delete(String key) {
         Log.i("DATA", "Deleted on " + id + ": " + key);
         getContext().deleteFile(key);
     }
@@ -318,7 +320,7 @@ public class SimpleDhtProvider extends ContentProvider {
 
         @Override
         protected Void doInBackground(ServerSocket... params) {
-            while(true) {
+            while (true) {
                 ServerSocket server = params[0];
                 try {
                     InputStream stream = server.accept().getInputStream();
@@ -339,16 +341,16 @@ public class SimpleDhtProvider extends ContentProvider {
         }
 
         private void nodeOperation(Message message) {
-            if(message.getType().equals(MESSAGE_JOIN_REQUEST)){
+            if (message.getType().equals(MESSAGE_JOIN_REQUEST)) {
                 Log.i("DEBUG", "calculating join sequence for new node");
                 String newid = message.getMessage();
                 try {
                     ids.add(newid);
                     Map<String, String> hmap = new TreeMap<>();
-                    for(String lid : ids)
+                    for (String lid : ids)
                         hmap.put(genHash(lid), lid);
                     ids = new ArrayList<>();
-                    for(String key : hmap.keySet())
+                    for (String key : hmap.keySet())
                         ids.add(hmap.get(key));
 
                     setNeighbours();
@@ -365,15 +367,15 @@ public class SimpleDhtProvider extends ContentProvider {
             }
         }
 
-        private void setNeighbours(){
+        private void setNeighbours() {
             Log.i("DEBUG", "setting new neighbours from : " + ids);
-            for(int i = 0; i < ids.size(); i++){
-                if(ids.get(i).equals(id)){
-                    if(i == 0)
-                        predecessor = ids.get(ids.size()-1);
+            for (int i = 0; i < ids.size(); i++) {
+                if (ids.get(i).equals(id)) {
+                    if (i == 0)
+                        predecessor = ids.get(ids.size() - 1);
                     else
-                        predecessor = ids.get(i-1);
-                    successor = ids.get((i+1)%ids.size());
+                        predecessor = ids.get(i - 1);
+                    successor = ids.get((i + 1) % ids.size());
                     Log.i("DEBUG", id + "=> Predecessor: " + predecessor + " Successor: " + successor);
                     break;
                 }
@@ -383,13 +385,13 @@ public class SimpleDhtProvider extends ContentProvider {
         private void sendConfirmation() {
             Log.i("DEBUG", "Sending confirmations");
             String confirm = "";
-            for(int i = 0; i < ids.size(); i++){
+            for (int i = 0; i < ids.size(); i++) {
                 confirm += ids.get(i);
-                if(i != ids.size() - 1)
+                if (i != ids.size() - 1)
                     confirm += "|";
             }
-            for(String lid : ids){
-                if(lid.equals(id))
+            for (String lid : ids) {
+                if (lid.equals(id))
                     continue;
                 int port = Integer.parseInt(lid) * 2;
                 Message msg = new Message(MESSAGE_JOIN_CONFIRMATION, confirm);
@@ -400,11 +402,11 @@ public class SimpleDhtProvider extends ContentProvider {
 
         private void dataOperation(Message message) {
             Log.i("DATA", "data operation " + message.getType() + ":" + message.getMessage() + " from " + message.getSenderport());
-            if(!message.getType().endsWith("L") && !message.getMessage().equals("\"@\"")){
+            if (!message.getType().endsWith("L") && !message.getMessage().equals("\"@\"")) {
                 String hashcheck = message.getMessage();
-                if(message.getType().equals(MESSAGE_DATA_INSERT))
+                if (message.getType().equals(MESSAGE_DATA_INSERT))
                     hashcheck = hashcheck.split(">>")[0];
-                if(!checkHash(hashcheck)) {
+                if (!checkHash(hashcheck)) {
                     Log.i("DATA", "Forwarding message to " + successor);
                     int sport = Integer.parseInt(successor) * 2;
                     sendMessage(message, sport);
@@ -412,16 +414,16 @@ public class SimpleDhtProvider extends ContentProvider {
                     return;
                 }
             }
-            if(message.getType().equals(MESSAGE_DATA_INSERT)){
+            if (message.getType().equals(MESSAGE_DATA_INSERT)) {
                 String[] vals = message.getMessage().split(">>");
                 save(vals[0], vals[1]);
-            } else if (message.getType().equals(MESSAGE_DATA_REQUEST)){
+            } else if (message.getType().equals(MESSAGE_DATA_REQUEST)) {
                 String msg = "";
-                if(message.getMessage().equals("\"@\"")){
+                if (message.getMessage().equals("\"@\"")) {
                     String[] lkeys = getContext().fileList();
-                    for(int i = 0; i < lkeys.length; i++) {
+                    for (int i = 0; i < lkeys.length; i++) {
                         msg += lkeys[i] + ">>" + fetch(lkeys[i]);
-                        if(i != lkeys.length-1)
+                        if (i != lkeys.length - 1)
                             msg += "|";
                     }
                 } else {
@@ -432,11 +434,11 @@ public class SimpleDhtProvider extends ContentProvider {
                 sendMessage(dataMsg, message.getSenderport());
                 //new ClientTask(message.getSenderport()).executeOnExecutor(THREAD_POOL_EXECUTOR, dataMsg);
                 Log.i("DATA", "Sending data from " + id + " to " + message.getSenderport() + " " + dataMsg.getMessage());
-            } else if (message.getType().equals(MESSAGE_DATA_DELETE)){
+            } else if (message.getType().equals(MESSAGE_DATA_DELETE)) {
                 delete(message.getMessage());
                 Log.i("DATA", "Deleting data from " + id + ":" + message.getMessage());
-            } else if (message.getType().equals(MESSAGE_DATA_LIST)){
-                if(!dataMsg.equals("") && !message.getMessage().isEmpty())
+            } else if (message.getType().equals(MESSAGE_DATA_LIST)) {
+                if (!dataMsg.equals("") && !message.getMessage().isEmpty())
                     dataMsg += "|";
                 dataMsg += message.getMessage();
                 dataCount++;
@@ -445,10 +447,10 @@ public class SimpleDhtProvider extends ContentProvider {
                 Log.i("DATA", "Executing last part of data operations");
                 String[] keys = getContext().fileList();
                 String msg = "";
-                for(int i = 0; i < keys.length; i++){
+                for (int i = 0; i < keys.length; i++) {
                     String val = fetch(keys[i]);
                     msg += keys[i] + ">>" + val;
-                    if(i != keys.length-1)
+                    if (i != keys.length - 1)
                         msg += "|";
                 }
                 Message dataMsg = new Message(MESSAGE_DATA_LIST, msg);
@@ -464,7 +466,7 @@ public class SimpleDhtProvider extends ContentProvider {
 
         private int port;
 
-        public ClientTask(int port){
+        public ClientTask(int port) {
             this.port = port;
         }
 

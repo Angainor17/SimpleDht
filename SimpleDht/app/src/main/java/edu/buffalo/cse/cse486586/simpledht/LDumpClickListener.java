@@ -74,7 +74,7 @@ public class LDumpClickListener implements View.OnClickListener {
             return null;
         }
 
-        protected void onProgressUpdate(String...strings) {
+        protected void onProgressUpdate(String... strings) {
             mTextView.append(strings[0]);
 
             return;

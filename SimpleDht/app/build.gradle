@@ -1,12 +1,12 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 29
 
     defaultConfig {
         applicationId "edu.buffalo.cse.cse486586.simpledht"
         minSdkVersion 19
-        targetSdkVersion 28
+        targetSdkVersion 29
     }
 
     buildTypes {

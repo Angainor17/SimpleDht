@@ -2,7 +2,6 @@ package edu.buffalo.cse.cse486586.simpledht;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
-import android.content.DialogInterface;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -79,7 +78,7 @@ public class GDumpClickListener implements OnClickListener {
             return null;
         }
 
-        protected void onProgressUpdate(String...strings) {
+        protected void onProgressUpdate(String... strings) {
             mTextView.append(strings[0]);
 
             return;
@@ -102,7 +101,7 @@ public class GDumpClickListener implements OnClickListener {
             try {
                 Cursor resultCursor = mContentResolver.query(mUri, null,
                         "\"*\"", null, null);
-                    if (resultCursor == null) {
+                if (resultCursor == null) {
                     Log.e(TAG, "Result null");
                     throw new Exception();
                 }
@@ -110,7 +109,7 @@ public class GDumpClickListener implements OnClickListener {
                 List<String> keys = new ArrayList<>();
                 List<String> values = new ArrayList<>();
 
-                while(resultCursor.moveToNext()){
+                while (resultCursor.moveToNext()) {
                     keys.add(resultCursor.getString(0));
                     values.add(resultCursor.getString(1));
                 }
